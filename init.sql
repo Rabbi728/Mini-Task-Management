@@ -1,5 +1,8 @@
 -- Adminer 5.4.2 PostgreSQL 18.1 dump
 
+DROP TYPE IF EXISTS task_status;
+CREATE TYPE task_status AS ENUM ('PENDING', 'IN_PROGRESS', 'DONE', 'CANCELLED');
+
 DROP TABLE IF EXISTS "activity_logs";
 DROP SEQUENCE IF EXISTS "public".activity_logs_id_seq1;
 CREATE SEQUENCE "public".activity_logs_id_seq1 INCREMENT 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1;
