@@ -26,7 +26,9 @@ const useAuthStore = create<AuthState>((set) => ({
         set({ user: { id: userData.id, name: userData.name, email: userData.email, role: userData.role } });
         
         return {id: userData.id, name: userData.name, email: userData.email, role: userData.role};
-    } catch (error) {
+    } catch (error: any) {
+        console.log(error);
+        
         return false;
     }
   },

@@ -6,7 +6,6 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   const token = request.cookies.get('token')?.value
-  let user = useAuthStore.getState().user
 
   const isPublicRoute = 
     pathname.startsWith('/login') || 
@@ -19,17 +18,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if(token && !user.name) {
+  console.log(pathname, token);
+  if(token) {
     const authUser = await useAuthStore.getState().fetchUser(token)
+    console.log(authUser, token);
     if(!authUser) {
-      const loginUrl = new URL('/login', request.url)
-      return NextResponse.redirect(loginUrl)
+        console.log('not');
+        
+    //   const response = NextResponse.redirect(new URL('/login', request.url))
+    //   response.cookies.delete('token')
+    //   return response
+    }
+    else if(authUser && pathname === '/login') {
+        return NextResponse.redirect(new URL('/', request.url))
     }
   }
-
-  if (token && pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
   return NextResponse.next()
 }
