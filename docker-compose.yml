@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: task-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: task
+    ports:
+      - "5432:5432"
+    networks:
+      - task-network
+    restart: always
+
+  adminer:
+    image: adminer:latest
+    container_name: task-adminer
+    environment:
+      ADMINER_DESIGN: "flat"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - task-network
+    restart: always
+
+  api:
+    build: api
+    container_name: task-api
+    environment:
+      DATABASE_URL: postgresql://postgres:admin@task-db:5432/task
+      FRONTEND_URL: http://localhost:3000
+    volumes:
+      - ./api:/app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    networks:
+      - task-network
+    restart: always
+  ui:
+    build: ui
+    container_name: task-ui
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000
+    volumes:
+      - ./ui:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - task-network
+    restart: always
+
+networks:
+  task-network:
+    driver: bridge
