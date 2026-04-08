@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import useAuthStore from "@/store/useAuthStore";
 
 
 const navigation = [
@@ -25,6 +26,7 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
@@ -93,12 +95,12 @@ export default function Sidebar() {
         <div className="p-4 mt-auto">
           <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
             <div className="flex items-center space-x-3">
-              <div className="size-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white">
-                AD
+              <div className="size-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white uppercase">
+                {user.name.charAt(0) || "U"}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate leading-none">Admin User</p>
-                <p className="text-xs text-slate-400 truncate mt-1">admin@miniapp.com</p>
+                <p className="text-sm font-semibold truncate leading-none">{user.name || "Guest User"}</p>
+                <p className="text-xs text-slate-400 truncate mt-1">{user.email || "guest@example.com"}</p>
               </div>
             </div>
             <button 

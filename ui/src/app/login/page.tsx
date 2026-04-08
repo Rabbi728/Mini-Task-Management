@@ -13,9 +13,11 @@ import {
 import { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import useAuthStore from "@/store/useAuthStore";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setToken, fetchUser } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +36,13 @@ export default function LoginPage() {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, formData);
       const { token } = response.data;
 
-      // Store token in localStorage
-      localStorage.setItem("token", token);
-      
-      // Store token in cookie for proxy middleware
+      // Update store and cookies
+      setToken(token);
       document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
       
-      // Redirect to dashboard
+      // Fetch user info
+      await fetchUser(token);
+      
       router.push("/");
     } catch (err: any) {
         console.log(err);

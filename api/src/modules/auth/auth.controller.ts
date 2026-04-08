@@ -7,7 +7,7 @@ import { PersonalAccessTokensService } from '@/modules/auth/service/personal-acc
 import { LoginDto } from '@/modules/auth/dto/login.dto';
 import { UserService } from '../user/user.service';
 
-@Controller('auth')
+@Controller()
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
