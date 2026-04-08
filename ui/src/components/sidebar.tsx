@@ -35,8 +35,11 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const filteredNavigation = navigation.filter(item => {
-    if (user.role === 'admin') return true;
-    return ["Dashboard", "My Tasks"].includes(item.name);
+    if (user.role === 'admin') {
+        return ["Dashboard", "Team Tasks", "Team Members", "Activity Logs"].includes(item.name);
+    } else {
+        return ["Dashboard", "My Tasks"].includes(item.name);
+    }
   });
 
   const handleLogout = async () => {
