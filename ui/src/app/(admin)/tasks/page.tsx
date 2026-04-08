@@ -1,153 +1,223 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Search, Calendar, Briefcase, User, Flag, CheckSquare, MoreHorizontal, Clock, ArrowUpRight, Filter, ChevronRight, X } from "lucide-react";
-import { useState } from "react";
+import { Plus, Edit2, Trash2, CheckSquare, Clock, User, AlertCircle, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import Swal from "sweetalert2";
 
-// Mock tasks data
-const mockTasks = [
-  { id: 1024, title: "Configure Redis Cluster", status: "In Progress", priority: "Urgent", assignee: "Sarah Connor", dueDate: "Oct 24, 2026", color: "bg-rose-500" },
-  { id: 1025, title: "Update Auth Module v2", status: "To Do", priority: "High", assignee: "James Bond", dueDate: "Oct 25, 2026", color: "bg-indigo-500" },
-  { id: 1026, title: "Dashboard UX Audit", status: "Completed", priority: "Medium", assignee: "Lara Croft", dueDate: "Oct 22, 2026", color: "bg-emerald-500" },
-  { id: 1027, title: "Fix API Rate Limiting", status: "In Progress", priority: "High", assignee: "Ethan Hunt", dueDate: "Oct 24, 2026", color: "bg-indigo-500" },
-  { id: 1028, title: "Email Template Redesign", status: "To Do", priority: "Low", assignee: "John Wick", dueDate: "Oct 30, 2026", color: "bg-slate-500" },
-];
+interface Task {
+  id: number;
+  uuid: string;
+  title: string;
+  description: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
+  assigned_user: number | null;
+  users_tasks_assigned_userTousers?: {
+    name: string;
+    email: string;
+  };
+  users_tasks_created_byTousers?: {
+    name: string;
+    email: string;
+  };
+  created_at: string;
+}
 
 export default function TasksPage() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredTasks = mockTasks.filter(task => 
-    task.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    task.assignee.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/tasks`, { withCredentials: true });
+        setTasks(response.data);
+        setError(null);
+      } catch (err) {
+        setError("Failed to load tasks.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTasks();
+  }, []);
+
+  const handleDelete = async (uuid: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#4f46e5",
+      cancelButtonColor: "#f87171",
+      confirmButtonText: "Yes, delete it!",
+      customClass: {
+        popup: "rounded-3xl border border-slate-200 shadow-2xl",
+        title: "text-slate-900 font-bold",
+        htmlContainer: "text-slate-500 font-medium",
+        confirmButton: "px-6 py-2.5 rounded-xl font-bold",
+        cancelButton: "px-6 py-2.5 rounded-xl font-bold"
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/tasks/${uuid}`, { withCredentials: true });
+        setTasks(tasks.filter((task) => task.uuid !== uuid));
+        
+        Swal.fire({
+          title: "Deleted!",
+          text: "Task has been deleted.",
+          icon: "success",
+          confirmButtonColor: "#4f46e5",
+          timer: 2000,
+          timerProgressBar: true,
+          customClass: {
+            popup: "rounded-3xl border border-slate-200 shadow-2xl",
+          }
+        });
+      } catch (err) {
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to delete task. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#4f46e5",
+          customClass: {
+            popup: "rounded-3xl border border-slate-200 shadow-2xl",
+          }
+        });
+      }
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'DONE': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      case 'IN_PROGRESS': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+      case 'CANCELLED': return 'bg-rose-50 text-rose-600 border-rose-100';
+      default: return 'bg-slate-50 text-slate-600 border-slate-100';
+    }
+  };
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-top-6 duration-700">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Live Tasks Monitoring</span>
-          </div>
-          <h1 className="text-5xl font-black text-slate-900 tracking-tighter">Tasks Center</h1>
-          <p className="text-slate-500 mt-2 text-lg font-medium">Orchestrate your workspace and monitor team progress.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Task Management</h1>
+          <p className="text-slate-500 mt-1 font-medium">Orchestrate your workspace and monitor team progress.</p>
         </div>
         <Link 
-          href="/admin/tasks/create"
-          className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 hover:bg-slate-900 text-white font-black rounded-3xl transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-indigo-600/30 group"
+          href="/tasks/create"
+          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-600/20 group"
         >
-          <Plus className="size-6 transition-transform group-hover:rotate-180 duration-500" />
-          <span>Initialize New Task</span>
+          <Plus className="size-5 transition-transform group-hover:rotate-90" />
+          <span>Add New Task</span>
         </Link>
       </div>
 
-      {/* Control Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50">
-        <div className="md:col-span-2 relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search by task title or assignee..."
-            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all font-bold text-slate-700 placeholder:text-slate-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-4">
-          <button className="flex-1 px-6 py-4 bg-slate-50 hover:bg-white border-2 border-slate-50 hover:border-indigo-500 flex items-center justify-center gap-2 rounded-2xl transition-all group font-bold text-slate-600 hover:text-indigo-600">
-            <Filter className="size-5 transition-transform group-hover:scale-110" />
-            <span>Filters</span>
-          </button>
-           <button className="p-4 bg-slate-900 text-white hover:bg-black rounded-2xl transition-all shadow-xl shadow-slate-900/20">
-            <Calendar className="size-5" />
-          </button>
-        </div>
-        <div className="flex items-center justify-end">
-           <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="size-11 rounded-2xl bg-indigo-50 border-4 border-white flex items-center justify-center text-xs font-black text-indigo-600 shadow-sm ring-1 ring-slate-100 hover:scale-110 hover:z-10 transition-all cursor-pointer">U{i}</div>
-              ))}
-               <div className="size-11 rounded-2xl bg-slate-900 border-4 border-white flex items-center justify-center text-xs font-black text-white shadow-sm">+9</div>
-           </div>
-        </div>
-      </div>
-
-      {/* Tasks Grid/Table */}
-      <div className="space-y-4">
-        {filteredTasks.map((task) => (
-          <div key={task.id} className="group bg-white p-6 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/30 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 hover:-translate-y-1">
-             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-start gap-5">
-                   <div className={`mt-1 size-12 rounded-2xl ${task.color} flex items-center justify-center shadow-lg shadow-black/5 group-hover:scale-110 transition-transform duration-500`}>
-                      <CheckSquare className="size-6 text-white" />
-                   </div>
-                   <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase tracking-widest border border-slate-100">ID-{task.id}</span>
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest border border-transparent ${
-                          task.priority === 'Urgent' ? 'bg-rose-50 text-rose-600' : 
-                          task.priority === 'High' ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-600'
-                        }`}>
-                          {task.priority} Priority
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider">Task Info</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider">Assignee</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider">Created By</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 className="size-8 text-indigo-500 animate-spin" />
+                      <p className="text-sm font-medium text-slate-500">Fetching tasks...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center">
+                    <p className="text-sm font-medium text-rose-500">{error}</p>
+                  </td>
+                </tr>
+              ) : tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center">
+                    <p className="text-sm font-medium text-slate-500">No tasks found.</p>
+                  </td>
+                </tr>
+              ) : (
+                tasks.map((task) => (
+                  <tr key={task.id} className="group hover:bg-slate-50/50 transition-all duration-200">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`size-10 rounded-xl flex items-center justify-center shadow-sm ring-2 ring-white ${task.status === 'DONE' ? 'bg-emerald-500' : 'bg-indigo-500'}`}>
+                          <CheckSquare className="size-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors uppercase truncate max-w-[200px]">{task.title}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Clock className="size-3 text-slate-400" />
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                              Created: {new Date(task.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-full bg-slate-100 flex items-center justify-center">
+                          <User className="size-4 text-slate-500" />
+                        </div>
+                        <span className="text-sm font-semibold text-slate-700">
+                          {task.users_tasks_assigned_userTousers?.name || "Unassigned"}
                         </span>
                       </div>
-                      <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">{task.title}</h3>
-                      <div className="flex items-center gap-4 pt-1">
-                        <div className="flex items-center gap-2">
-                           <User className="size-3.5 text-slate-400" />
-                           <span className="text-xs font-bold text-slate-500">{task.assignee}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-full bg-slate-100 flex items-center justify-center">
+                          <User className="size-4 text-slate-500" />
                         </div>
-                        <div className="flex items-center gap-2">
-                           <Clock className="size-3.5 text-slate-400" />
-                           <span className="text-xs font-bold text-slate-500">Due {task.dueDate}</span>
-                        </div>
+                        <span className="text-sm font-semibold text-slate-700">
+                          {task.users_tasks_created_byTousers?.name || "Unassigned"}
+                        </span>
                       </div>
-                   </div>
-                </div>
-
-                <div className="flex items-center justify-between md:justify-end gap-6">
-                   <div className="flex items-center gap-1.5">
-                      <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border ${
-                        task.status === 'Completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        task.status === 'In Progress' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-600 border-slate-100'
-                      }`}>
-                         <span className={`size-1.5 rounded-full ${task.status === 'Completed' ? 'bg-emerald-500' : task.status === 'In Progress' ? 'bg-indigo-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                         {task.status}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider ${getStatusColor(task.status)}`}>
+                        {task.status.replace('_', ' ')}
                       </span>
-                   </div>
-                   <div className="flex items-center gap-2">
-                      <Link 
-                        href={`/admin/tasks/${task.id}/edit`}
-                        className="p-3 bg-slate-50 hover:bg-slate-900 text-slate-400 hover:text-white rounded-2xl transition-all hover:scale-110 active:scale-90"
-                      >
-                         <ArrowUpRight className="size-5" />
-                      </Link>
-                      <button className="p-3 bg-slate-50 hover:bg-rose-600 text-slate-400 hover:text-white rounded-2xl transition-all hover:scale-110 active:scale-90">
-                         <MoreHorizontal className="size-5" />
-                      </button>
-                   </div>
-                </div>
-             </div>
-          </div>
-        ))}
-        
-        {/* Pagination */}
-        <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-6 px-4">
-           <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Page <span className="text-slate-900">01</span> / 12</p>
-           <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-100 rounded-2xl font-black text-slate-400 opacity-50 cursor-not-allowed">Previous</button>
-              <div className="flex items-center gap-2">
-                 {[1, 2, 3].map(p => (
-                   <button key={p} className={`size-12 rounded-2xl font-black transition-all ${p === 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border-2 border-slate-50 text-slate-600 hover:border-indigo-200'}`}>{p}</button>
-                 ))}
-                 <span className="text-slate-300">...</span>
-              </div>
-              <button className="group flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-xl shadow-slate-900/20">
-                 <span>Next Engine</span>
-                 <ChevronRight className="size-4 transition-transform group-hover:translate-x-1" />
-              </button>
-           </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link 
+                          href={`/tasks/${task.uuid}/edit`}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        >
+                          <Edit2 className="size-4" />
+                        </Link>
+                        <button 
+                          onClick={() => handleDelete(task.uuid)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

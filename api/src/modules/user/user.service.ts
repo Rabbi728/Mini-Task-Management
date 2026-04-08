@@ -4,6 +4,7 @@ import { PrismaService } from '@/common/prisma.service'
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { randomUUID } from 'crypto';
+import { getDhakaDate } from '@/common/utils';
 
 @Injectable()
 export class UserService {
@@ -13,7 +14,9 @@ export class UserService {
     ) { }
 
     async all() {
-        return await this.prismaService.users.findMany();
+        return await this.prismaService.users.findMany({
+            orderBy: { id: 'desc' }
+        });
     }
 
     async findById(id: number) {
@@ -43,8 +46,8 @@ export class UserService {
                 ...data,
                 password: hashedPassword,
                 uuid: randomUUID(),
-                created_at: new Date(),
-                updated_at: new Date()
+                created_at: getDhakaDate(),
+                updated_at: getDhakaDate()
             }
         });
     }
@@ -52,7 +55,7 @@ export class UserService {
     async update(uuid: string, data: UpdateUserDto) {
         const updateData: any = {
             ...data,
-            updated_at: new Date()
+            updated_at: getDhakaDate()
         };
 
         if (data.password) {

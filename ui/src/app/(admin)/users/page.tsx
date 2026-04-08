@@ -25,7 +25,7 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, { withCredentials: true });
         setUsers(response.data);
         setError(null);
       } catch (err) {

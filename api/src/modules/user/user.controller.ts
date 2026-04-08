@@ -3,16 +3,17 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@/common/auth.guard';
 
 @Controller('users')
-// @UseGuards(AdminAuthGuard)
+@UseGuards(AuthGuard)
 export class UserController {
     constructor(private readonly userService: UserService) { }
 
     @Get()
     async getAll() {
         return await this.userService.all();
-    }   
+    }
 
     @Post()
     async create(@Body() body: CreateUserDto) {

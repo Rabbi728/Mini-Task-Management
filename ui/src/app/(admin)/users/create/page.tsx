@@ -37,7 +37,7 @@ export default function CreateUserPage() {
     try {
       await userSchema.validate(formData, { abortEarly: false });
       
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/users`, formData);
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/users`, formData, { withCredentials: true });
       setSuccess(true);
       setFormData({ name: "", email: "", role: "user", password: "" });
     } catch (err: any) {

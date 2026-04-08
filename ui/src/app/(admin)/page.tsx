@@ -1,160 +1,252 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import axios from "axios";
 import { 
   Users, 
   CheckSquare, 
   Clock, 
-  TrendingUp, 
-  ArrowUpRight, 
-  Settings, 
-  LayoutDashboard,
-  Activity,
   Zap,
-  Calendar
+  Activity,
+  History,
+  Loader2,
+  AlertCircle,
+  XCircle,
+  Timer,
+  CheckCircle2
 } from "lucide-react";
-import Link from "next/link";
+import useAuthStore from "@/store/useAuthStore";
+import { formatDateTime } from "@/lib/utils";
 
-const stats = [
-  { name: "Total Users", value: "12,345", change: "+12.5%", icon: Users, color: "bg-indigo-500", shadow: "shadow-indigo-500/30" },
-  { name: "Active Tasks", value: "482", change: "+4.3%", icon: CheckSquare, color: "bg-emerald-500", shadow: "shadow-emerald-500/30" },
-  { name: "SLA Progress", value: "94.2%", change: "+2.1%", icon: Clock, color: "bg-amber-500", shadow: "shadow-amber-500/30" },
-  { name: "Growth Rate", value: "+24%", change: "+1.2%", icon: TrendingUp, color: "bg-rose-500", shadow: "shadow-rose-500/30" },
-];
+interface DashboardStats {
+  users?: { total: number };
+  tasks: {
+    total: number;
+    pending: number;
+    in_progress: number;
+    done: number;
+    cancelled: number;
+  };
+  recent_activity?: Array<{
+    id: number;
+    details: string;
+    record_type: string;
+    created_at: string;
+    users?: { name: string; email: string };
+  }>;
+}
 
-export default function AdminDashboard() {
+export default function DashboardPage() {
+  const { user } = useAuthStore();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const endpoint = user.role === "admin" ? "/dashboard/stats" : "/dashboard/my-stats";
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, { withCredentials: true });
+        setStats(response.data);
+      } catch (err) {
+        setError("Failed to load dashboard data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user.role) {
+      fetchStats();
+    }
+  }, [user.role]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="size-10 text-indigo-500 animate-spin" />
+        <p className="font-medium text-slate-500">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <AlertCircle className="size-10 text-rose-500" />
+        <p className="font-bold text-rose-500 text-sm">{error || "Data unavailable"}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-top-6 duration-700">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8 border-b border-slate-200">
-        <div>
-           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-black uppercase tracking-widest mb-4">
-            <Zap className="size-3 fill-indigo-600" />
-            <span>System Online</span>
-          </div>
-          <h1 className="text-5xl font-black text-slate-900 tracking-tight leading-none">
-            Welcome, <span className="text-transparent bg-clip-text bg-gradient-to-tr from-indigo-600 to-purple-600">Admin!</span>
-          </h1>
-          <p className="text-slate-500 mt-4 text-lg font-medium max-w-xl">
-            Here's what's happening with your projects today. You have <span className="text-slate-900 font-bold decoration-indigo-500 underline decoration-4 underline-offset-4">12 urgent tasks</span> requiring attention.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-3.5 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:border-indigo-500 hover:text-indigo-600 transition-all flex items-center gap-2 shadow-xl shadow-slate-200/50">
-            <Calendar className="size-5" />
-            <span>Schedule</span>
-          </button>
-          <Link 
-            href="/admin/settings"
-            className="p-3.5 bg-slate-900 text-white rounded-2xl hover:bg-black transition-all shadow-2xl shadow-slate-900/40"
-          >
-            <Settings className="size-6" />
-          </Link>
-        </div>
+    <div className="space-y-10 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="pb-6 border-b border-slate-100">
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Welcome back, {user.name}!
+        </h1>
+        <p className="text-slate-500 mt-1 font-medium">
+           You have <span className="text-indigo-600 font-bold">{stats.tasks.total} total tasks</span> across the platform.
+        </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        {stats.map((stat) => (
-          <div key={stat.name} className="group relative bg-white p-8 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 hover:-translate-y-2 overflow-hidden">
-             <div className={`absolute top-0 right-0 size-32 opacity-5 rounded-full -mr-16 -mt-16 transition-transform duration-700 group-hover:scale-150 ${stat.color}`}></div>
-             <div className="relative flex flex-col h-full space-y-6">
-                <div className={`size-14 rounded-2xl ${stat.color} flex items-center justify-center shadow-lg ${stat.shadow} group-hover:scale-110 transition-transform duration-500`}>
-                  <stat.icon className="size-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-black text-slate-400 uppercase tracking-widest">{stat.name}</p>
-                  <div className="flex items-end gap-3 mt-1">
-                    <h3 className="text-4xl font-black text-slate-900 leading-none">{stat.value}</h3>
-                    <span className="text-xs font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">{stat.change}</span>
-                  </div>
-                </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {user.role === "admin" && stats.users && (
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
+             <div className="size-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+               <Users className="size-6 text-indigo-600" />
+             </div>
+             <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Users</p>
+                <h3 className="text-2xl font-bold text-slate-900">{stats.users.total}</h3>
              </div>
           </div>
-        ))}
+        )}
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
+           <div className="size-12 rounded-xl bg-amber-50 flex items-center justify-center">
+             <Timer className="size-6 text-amber-600" />
+           </div>
+           <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Tasks</p>
+              <h3 className="text-2xl font-bold text-slate-900">{stats.tasks.pending}</h3>
+           </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
+           <div className="size-12 rounded-xl bg-blue-50 flex items-center justify-center">
+             <Zap className="size-6 text-blue-600 fill-blue-600" />
+           </div>
+           <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">In Progress</p>
+              <h3 className="text-2xl font-bold text-slate-900">{stats.tasks.in_progress}</h3>
+           </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
+           <div className="size-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+             <CheckCircle2 className="size-6 text-emerald-600" />
+           </div>
+           <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Completed</p>
+              <h3 className="text-2xl font-bold text-slate-900">{stats.tasks.done}</h3>
+           </div>
+        </div>
       </div>
 
-      {/* Bottom Layout - Table + Charts Placeholder */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-         {/* Recent Activity */}
-         <div className="lg:col-span-2 space-y-8">
-            <div className="flex items-center justify-between pb-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Recent Tasks</h2>
-              <Link href="/admin/tasks" className="text-sm font-black text-indigo-600 hover:text-indigo-700 underline decoration-2 underline-offset-4 tracking-tight">View All Tasks</Link>
-            </div>
-            
-            <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl shadow-slate-200/30 overflow-hidden">
-               <div className="p-4 space-y-1">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-6 hover:bg-slate-50 transition-all rounded-[30px] group border border-transparent hover:border-slate-100">
-                      <div className="flex items-center gap-5">
-                         <div className="size-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
-                            <CheckSquare className="size-6" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         {/* Recent Activity (Admin) or Summary (User) */}
+         <div className="lg:col-span-2 space-y-6">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+               <History className="size-5 text-indigo-600" />
+               <span>{user.role === 'admin' ? 'Recent Activity' : 'My Performance'}</span>
+            </h2>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+               {user.role === 'admin' && stats.recent_activity ? (
+                  <div className="divide-y divide-slate-100">
+                     {stats.recent_activity.map((activity) => (
+                       <div key={activity.id} className="p-5 flex items-start gap-4 hover:bg-slate-50 transition-all">
+                          <div className="size-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                             <Activity className="size-5 text-slate-500" />
+                          </div>
+                          <div className="space-y-1">
+                             <p className="text-sm font-semibold text-slate-900">{activity.details}</p>
+                             <p className="text-xs text-slate-400 font-medium">
+                                <span className="text-indigo-600">{activity.users?.name || 'System'}</span>
+                                <span className="mx-2">•</span>
+                                <span>{formatDateTime(activity.created_at)}</span>
+                             </p>
+                          </div>
+                       </div>
+                     ))}
+                  </div>
+               ) : (
+                  <div className="p-8 space-y-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <div className="p-6 bg-rose-50/50 rounded-xl border border-rose-100 flex items-center justify-between">
+                            <div>
+                               <p className="text-xs font-bold text-rose-400 uppercase tracking-wider">Cancelled</p>
+                               <p className="text-2xl font-bold text-rose-600">{stats.tasks.cancelled}</p>
+                            </div>
+                            <XCircle className="size-8 text-rose-200" />
                          </div>
-                         <div>
-                            <p className="font-black text-slate-900 group-hover:text-indigo-600 transition-colors">Implement Auth Module #{1024 + i}</p>
-                            <p className="text-sm text-slate-400 font-bold mt-1">Project: Enterprise CRM • Priority: <span className="text-rose-500">High</span></p>
+                         <div className="p-6 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+                            <div>
+                               <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Success Rate</p>
+                               <p className="text-2xl font-bold text-indigo-600">
+                                 {stats.tasks.total > 0 ? Math.round((stats.tasks.done / stats.tasks.total) * 100) : 0}%
+                               </p>
+                            </div>
+                            <CheckSquare className="size-8 text-indigo-200" />
                          </div>
                       </div>
-                      <div className="flex items-center gap-6">
-                         <div className="hidden sm:flex -space-x-3">
-                            {[1, 2, 3].map(u => (
-                              <div key={u} className="size-10 rounded-xl bg-slate-200 border-4 border-white flex items-center justify-center text-[10px] font-black group-hover:border-indigo-50 transition-all">U{u}</div>
-                            ))}
-                         </div>
-                         <button className="p-3 bg-slate-100 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm">
-                            <ArrowUpRight className="size-5" />
-                         </button>
+                      <div className="bg-indigo-600 p-6 rounded-2xl text-white">
+                         <h3 className="font-bold flex items-center gap-2">
+                            <Zap className="size-4 fill-white" />
+                            Quick Tip
+                         </h3>
+                         <p className="text-indigo-100 text-sm mt-1">
+                            Focus on completing your <span className="font-bold text-white">{stats.tasks.in_progress} active tasks</span> to improve your completion score.
+                         </p>
                       </div>
-                    </div>
-                  ))}
-               </div>
+                  </div>
+               )}
             </div>
          </div>
 
-         {/* Sidebar widgets */}
-         <div className="space-y-10">
-             <div className="bg-slate-900 text-white p-10 rounded-[40px] shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 size-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700"></div>
-                <div className="relative space-y-8">
-                   <div className="size-12 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-                      <Activity className="size-6 text-white" />
-                   </div>
-                   <div className="space-y-4">
-                      <h3 className="text-2xl font-black tracking-tight leading-tight">Advanced Analytics is ready.</h3>
-                      <p className="text-slate-400 font-medium leading-relaxed">Upgrade your plan to unlock deep insights and predictive modeling features for your team.</p>
-                   </div>
-                   <button className="w-full py-5 bg-white text-slate-900 font-black rounded-2xl hover:bg-indigo-50 transition-all tracking-tight shadow-xl">
-                      Explore Pro Features
-                   </button>
-                </div>
-             </div>
-
-             <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40 space-y-8">
-                <h3 className="text-xl font-black text-slate-900 tracking-tight">Active Team</h3>
-                <div className="space-y-6">
-                   {[
-                    { name: "Sarah Connor", active: true, role: "Manager" },
-                    { name: "James Bond", active: true, role: "DevOps" },
-                    { name: "Lara Croft", active: false, role: "Designer" },
-                   ].map(member => (
-                     <div key={member.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                           <div className="size-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-sm font-black text-indigo-600">
-                             {member.name.split(' ').map(n => n[0]).join('')}
-                           </div>
-                           <div>
-                              <p className="text-sm font-black text-slate-900">{member.name}</p>
-                              <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">{member.role}</p>
-                           </div>
-                        </div>
-                        <div className={`size-3 rounded-full ${member.active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-200'}`}></div>
+         {/* Sidebar Widget */}
+         <div className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+               <Activity className="size-5 text-indigo-600" />
+               <span>Tasks Health</span>
+            </h2>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+               <div className="space-y-4">
+                  <div className="space-y-2">
+                     <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>Completion Rate</span>
+                        <span className="text-indigo-600">
+                          {stats.tasks.total > 0 ? Math.round((stats.tasks.done / stats.tasks.total) * 100) : 0}%
+                        </span>
                      </div>
-                   ))}
-                </div>
-                <Link href="/admin/users" className="block text-center py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-all border-2 border-dashed border-slate-100 hover:border-indigo-500 rounded-2xl">
-                   Manage Everyone
-                </Link>
-             </div>
+                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-emerald-500" 
+                          style={{ width: `${stats.tasks.total > 0 ? (stats.tasks.done / stats.tasks.total) * 100 : 0}%` }}
+                        ></div>
+                     </div>
+                  </div>
+                  <div className="space-y-2">
+                     <div className="flex justify-between text-xs font-bold text-slate-500">
+                        <span>Workload</span>
+                        <span className="text-amber-600">
+                          {stats.tasks.total > 0 ? Math.round((stats.tasks.in_progress / stats.tasks.total) * 100) : 0}%
+                        </span>
+                     </div>
+                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-amber-500" 
+                          style={{ width: `${stats.tasks.total > 0 ? (stats.tasks.in_progress / stats.tasks.total) * 100 : 0}%` }}
+                        ></div>
+                     </div>
+                  </div>
+               </div>
+               
+               <div className="pt-6 border-t border-slate-100">
+                  <div className="flex items-center gap-3">
+                     <div className="size-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
+                        {user.name.charAt(0)}
+                     </div>
+                     <div>
+                        <p className="text-sm font-bold text-slate-900 leading-none">{user.name}</p>
+                        <p className="text-xs text-slate-400 font-medium mt-1 capitalize">{user.role}</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
          </div>
       </div>
     </div>

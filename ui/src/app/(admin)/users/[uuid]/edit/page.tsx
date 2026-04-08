@@ -39,7 +39,7 @@ export default function EditUserPage({
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users/${uuid}`);
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users/${uuid}`, { withCredentials: true });
         const user = response.data;
         setFormData({
           name: user.name,
@@ -69,7 +69,7 @@ export default function EditUserPage({
       const payload: any = { ...formData };
       if (!payload.password) delete payload.password;
 
-      await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/users/${uuid}`, payload);
+      await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/users/${uuid}`, payload, { withCredentials: true });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {

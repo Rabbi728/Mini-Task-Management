@@ -14,24 +14,22 @@ export async function proxy(request: NextRequest) {
     pathname.includes('.')
 
   if (!token && !isPublicRoute) {
-    const loginUrl = new URL('/login', request.url)
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  console.log(pathname, token);
-  if(token) {
+  if (token) {
     const authUser = await useAuthStore.getState().fetchUser(token)
-    console.log(authUser, token);
-    if(!authUser) {
-        console.log('not');
-        
-    //   const response = NextResponse.redirect(new URL('/login', request.url))
-    //   response.cookies.delete('token')
-    //   return response
-    }
-    else if(authUser && pathname === '/login') {
-        return NextResponse.redirect(new URL('/', request.url))
+    
+    if (!authUser) {
+      if (!isPublicRoute) {
+        const response = NextResponse.redirect(new URL('/login', request.url))
+        response.cookies.delete('token')
+        return response
+      }
+    } else if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/', request.url))
     }
   }
+
   return NextResponse.next()
 }

@@ -10,34 +10,47 @@ import {
   Bell,
   Search,
   Menu,
-  X
+  X,
+  History,
+  Briefcase
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import useAuthStore from "@/store/useAuthStore";
+import axios from "axios";
 
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Users", href: "/users", icon: Users },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "My Tasks", href: "/my-tasks", icon: Briefcase },
+  { name: "Team Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Team Members", href: "/users", icon: Users },
+  { name: "Activity Logs", href: "/activity-logs", icon: History },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, clearUser } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleLogout = () => {
-    // Clear token from localStorage
-    localStorage.removeItem("token");
-    
-    // Clear token from cookies
-    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    
-    // Redirect to login
-    router.push("/login");
+  const filteredNavigation = navigation.filter(item => {
+    if (user.role === 'admin') return true;
+    return ["Dashboard", "My Tasks"].includes(item.name);
+  });
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/logout`, {}, { withCredentials: true });
+    } catch (err) {
+      console.error("Logout API failed", err);
+    } finally {
+      clearUser();
+      
+      localStorage.removeItem("token");
+      document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      router.push("/login");
+    }
   };
 
   return (
@@ -72,7 +85,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link

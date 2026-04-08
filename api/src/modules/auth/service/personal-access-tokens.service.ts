@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from '@/common/prisma.service';
+import { getDhakaDate } from '@/common/utils';
 
 @Injectable()
 export class PersonalAccessTokensService {
@@ -18,7 +19,8 @@ export class PersonalAccessTokensService {
 
     async createToken(userId: number) {
         const validityDays = parseInt(process.env.AUTH_TOKEN_VALIDITY || '1');
-        const expiresAt = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000);
+        const now = getDhakaDate();
+        const expiresAt = new Date(now.getTime() + validityDays * 24 * 60 * 60 * 1000);
         const plainToken = this.generateTokenString();
         const tokenHash = this.hashToken(plainToken);
 
@@ -27,8 +29,8 @@ export class PersonalAccessTokensService {
                 user_id: userId,
                 token: tokenHash,
                 expires_at: expiresAt,
-                created_at: new Date(),
-                updated_at: new Date()
+                created_at: now,
+                updated_at: now
             }
         });
 
@@ -43,7 +45,7 @@ export class PersonalAccessTokensService {
             }
         })
         if (!tokenRow) return null
-        if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) return null
+        if (tokenRow.expires_at && new Date(tokenRow.expires_at) < getDhakaDate()) return null
         return tokenRow
     }
 
